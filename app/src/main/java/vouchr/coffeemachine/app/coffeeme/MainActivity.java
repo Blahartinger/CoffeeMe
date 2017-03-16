@@ -1,31 +1,12 @@
 package vouchr.coffeemachine.app.coffeeme;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.api.client.extensions.android.http.AndroidHttp;
-import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
-import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
-import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
-
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.jackson2.JacksonFactory;
-import com.google.api.client.util.ExponentialBackOff;
-
-import com.google.api.services.sheets.v4.SheetsScopes;
-
-import com.google.api.services.sheets.v4.model.*;
-
 import android.Manifest;
 import android.accounts.AccountManager;
-import android.app.Activity;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -38,36 +19,64 @@ import android.text.method.ScrollingMovementMethod;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
+
+import com.google.api.client.extensions.android.http.AndroidHttp;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
+import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
+import com.google.api.client.http.HttpTransport;
+import com.google.api.client.json.JsonFactory;
+import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.client.util.ExponentialBackOff;
+import com.google.api.services.sheets.v4.SheetsScopes;
+import com.google.api.services.sheets.v4.model.ValueRange;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import butterknife.OnClick;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
+import vouchr.coffee.models.CoffeePot;
+import vouchr.coffee.models.CoffeePotBuilder;
 
 public class MainActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks {
-    GoogleAccountCredential mCredential;
-    private TextView mOutputText;
-    private Button mCallApiButton;
-    ProgressDialog mProgress;
 
-    static final int REQUEST_ACCOUNT_PICKER = 1000;
-    static final int REQUEST_AUTHORIZATION = 1001;
-    static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
-    static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
+    private static final int REQUEST_ACCOUNT_PICKER = 1000;
+    private static final int REQUEST_AUTHORIZATION = 1001;
+    private static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
+    private static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
 
-    private static final String BUTTON_TEXT = "Call Google Sheets API";
     private static final String PREF_ACCOUNT_NAME = "accountName";
     private static final String[] SCOPES = {SheetsScopes.SPREADSHEETS};
 
+    @BindView(R.id.outputTextView)
+    protected TextView outputTextView;
+    @BindView(R.id.callGoogleSheetsButton)
+    protected Button callApiButton;
+    @BindView(R.id.coffeePotList)
+    protected ListView coffeePotList;
+    @BindView(R.id.content_main_layout)
+    protected LinearLayout content_main_layout;
+    @BindView(R.id.toolbar)
+    protected Toolbar toolbar;
+    @BindView(R.id.fab)
+    protected FloatingActionButton fab;
+    protected ProgressDialog progressDialog;
+
+    private GoogleAccountCredential googleAccountCredential;
     private List<CoffeePot> coffeePots = null;
 
 
@@ -93,82 +102,59 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         return super.onOptionsItemSelected(item);
     }
 
-
-    private void addPreviousPot() {
-        CoffeePot previousPot = coffeePots.get(coffeePots.size() - 1);
-        previousPot.dateString = new Date().toString();
-        previousPot.avgRating = 0.0d;
-        SimpleDateFormat format = new SimpleDateFormat("M/dd/YYYY");
-        previousPot.dateString = format.format(new Date());
-        new AddCoffeePotRequestTask(mCredential).execute(coffeePots.get(coffeePots.size() - 1));
-    }
-
-    /**
-     * Create the main activity.
-     *
-     * @param savedInstanceState previously saved instance data.
-     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        ButterKnife.bind(this);
 
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
-                BrewCoffeePotView brewView = new BrewCoffeePotView(MainActivity.this);
-                Dialog brewDialog = new Dialog(MainActivity.this, R.style.BrewCoffeePotDialog);
-                brewDialog.setContentView(brewView);
-                brewDialog.show();
-
-//                addPreviousPot();
+//                showAddNewPotDialog();
+                addPreviousPot();
                 Snackbar.make(view, "Added new Pot!", Snackbar.LENGTH_SHORT).show();
             }
         });
 
-        LinearLayout activityLayout = (LinearLayout) findViewById(R.id.content_main_layout);
-        activityLayout.setPadding(16, 16, 16, 16);
+        outputTextView.setVerticalScrollBarEnabled(true);
+        outputTextView.setMovementMethod(new ScrollingMovementMethod());
 
-        ViewGroup.LayoutParams tlp = new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT);
-
-        mCallApiButton = new Button(this);
-        mCallApiButton.setText(BUTTON_TEXT);
-        mCallApiButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mCallApiButton.setEnabled(false);
-                mOutputText.setText("");
-                getResultsFromApi();
-                mCallApiButton.setEnabled(true);
-            }
-        });
-        activityLayout.addView(mCallApiButton);
-
-        mOutputText = new TextView(this);
-        mOutputText.setLayoutParams(tlp);
-        mOutputText.setPadding(16, 16, 16, 16);
-        mOutputText.setVerticalScrollBarEnabled(true);
-        mOutputText.setMovementMethod(new ScrollingMovementMethod());
-        mOutputText.setText(
-                "Click the \'" + BUTTON_TEXT + "\' button to test the API.");
-        activityLayout.addView(mOutputText);
-
-        mProgress = new ProgressDialog(this);
-        mProgress.setMessage("Calling Google Sheets API ...");
+        progressDialog = new ProgressDialog(this);
+        progressDialog.setMessage(getString(R.string.calling_google_sheets_api));
 
         // Initialize credentials and service object.
-        mCredential = GoogleAccountCredential.usingOAuth2(
-                getApplicationContext(), Arrays.asList(SCOPES))
-                .setBackOff(new ExponentialBackOff());
+        googleAccountCredential = GoogleAccountCredential.usingOAuth2(getApplicationContext(), Arrays.asList(SCOPES)).setBackOff(new ExponentialBackOff());
     }
 
+    private void showAddNewPotDialog() {
+        BrewCoffeePotView brewView = new BrewCoffeePotView(MainActivity.this);
+        Dialog brewDialog = new Dialog(MainActivity.this, R.style.BrewCoffeePotDialog);
+        brewDialog.setContentView(brewView);
+        brewDialog.show();
+    }
+
+    @OnClick(R.id.callGoogleSheetsButton)
+    protected void callApiButtonClick() {
+        callApiButton.setEnabled(false);
+        outputTextView.setText("");
+        getResultsFromApi();
+        callApiButton.setEnabled(true);
+    }
+
+    private void addPreviousPot() {
+        CoffeePot previousPot = coffeePots.get(coffeePots.size() - 1);
+        if(previousPot != null) {
+            SimpleDateFormat format = new SimpleDateFormat("M/dd/YYYY", Locale.ENGLISH);
+            CoffeePot newPot = CoffeePotBuilder.coffeePotBuilderFromCoffeePot(previousPot)
+                    .setDateString(format.format(new Date()))
+                    .setAvgRating(0.0d)
+                    .createCoffeePot();
+            new AddCoffeePotRequestTask(googleAccountCredential).execute(newPot);
+        }
+    }
 
     /**
      * Attempt to call the API, after verifying that all the preconditions are
@@ -178,14 +164,14 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
      * appropriate.
      */
     private void getResultsFromApi() {
-        if (!isGooglePlayServicesAvailable()) {
-            acquireGooglePlayServices();
-        } else if (mCredential.getSelectedAccountName() == null) {
+        if (!Utils.isGooglePlayServicesAvailable(this)) {
+            Utils.acquireGooglePlayServices(this, REQUEST_GOOGLE_PLAY_SERVICES);
+        } else if (googleAccountCredential.getSelectedAccountName() == null) {
             chooseAccount();
-        } else if (!isDeviceOnline()) {
-            mOutputText.setText("No network connection available.");
+        } else if (!Utils.isDeviceOnline(this)) {
+            outputTextView.setText(R.string.no_network_connection_available);
         } else {
-            new CoffeeMeDataFetchRequestTask(mCredential).execute();
+            new CoffeeMeDataFetchRequestTask(googleAccountCredential).execute();
         }
     }
 
@@ -206,12 +192,12 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             String accountName = getPreferences(Context.MODE_PRIVATE)
                     .getString(PREF_ACCOUNT_NAME, null);
             if (accountName != null) {
-                mCredential.setSelectedAccountName(accountName);
+                googleAccountCredential.setSelectedAccountName(accountName);
                 getResultsFromApi();
             } else {
                 // Start a dialog from which the user can choose an account
                 startActivityForResult(
-                        mCredential.newChooseAccountIntent(),
+                        googleAccountCredential.newChooseAccountIntent(),
                         REQUEST_ACCOUNT_PICKER);
             }
         } else {
@@ -242,9 +228,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         switch (requestCode) {
             case REQUEST_GOOGLE_PLAY_SERVICES:
                 if (resultCode != RESULT_OK) {
-                    mOutputText.setText(
-                            "This app requires Google Play Services. Please install " +
-                                    "Google Play Services on your device and relaunch this app.");
+                    outputTextView.setText(R.string.this_app_requires_google_play_services);
                 } else {
                     getResultsFromApi();
                 }
@@ -260,7 +244,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                         SharedPreferences.Editor editor = settings.edit();
                         editor.putString(PREF_ACCOUNT_NAME, accountName);
                         editor.apply();
-                        mCredential.setSelectedAccountName(accountName);
+                        googleAccountCredential.setSelectedAccountName(accountName);
                         getResultsFromApi();
                     }
                 }
@@ -317,72 +301,14 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         // Do nothing.
     }
 
-    /**
-     * Checks whether the device currently has a network connection.
-     *
-     * @return true if the device has a network connection, false otherwise.
-     */
-    private boolean isDeviceOnline() {
-        ConnectivityManager connMgr =
-                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
-        return (networkInfo != null && networkInfo.isConnected());
-    }
-
-    /**
-     * Check that Google Play services APK is installed and up to date.
-     *
-     * @return true if Google Play Services is available and up to
-     * date on this device; false otherwise.
-     */
-    private boolean isGooglePlayServicesAvailable() {
-        GoogleApiAvailability apiAvailability =
-                GoogleApiAvailability.getInstance();
-        final int connectionStatusCode =
-                apiAvailability.isGooglePlayServicesAvailable(this);
-        return connectionStatusCode == ConnectionResult.SUCCESS;
-    }
-
-    /**
-     * Attempt to resolve a missing, out-of-date, invalid or disabled Google
-     * Play Services installation via a user dialog, if possible.
-     */
-    private void acquireGooglePlayServices() {
-        GoogleApiAvailability apiAvailability =
-                GoogleApiAvailability.getInstance();
-        final int connectionStatusCode =
-                apiAvailability.isGooglePlayServicesAvailable(this);
-        if (apiAvailability.isUserResolvableError(connectionStatusCode)) {
-            showGooglePlayServicesAvailabilityErrorDialog(connectionStatusCode);
-        }
-    }
-
-
-    /**
-     * Display an error dialog showing that Google Play Services is missing
-     * or out of date.
-     *
-     * @param connectionStatusCode code describing the presence (or lack of)
-     *                             Google Play Services on this device.
-     */
-    void showGooglePlayServicesAvailabilityErrorDialog(
-            final int connectionStatusCode) {
-        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-        Dialog dialog = apiAvailability.getErrorDialog(
-                MainActivity.this,
-                connectionStatusCode,
-                REQUEST_GOOGLE_PLAY_SERVICES);
-        dialog.show();
-    }
-
     private class AddCoffeePotRequestTask extends AsyncTask<CoffeePot, Void, Void> {
-        private com.google.api.services.sheets.v4.Sheets mService = null;
-        private Exception mLastError = null;
+        private com.google.api.services.sheets.v4.Sheets gSheetsService = null;
+        private Exception lastException = null;
 
         AddCoffeePotRequestTask(GoogleAccountCredential credential) {
             HttpTransport transport = AndroidHttp.newCompatibleTransport();
             JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
-            mService = new com.google.api.services.sheets.v4.Sheets.Builder(transport, jsonFactory, credential)
+            gSheetsService = new com.google.api.services.sheets.v4.Sheets.Builder(transport, jsonFactory, credential)
                     .setApplicationName("CoffeeMe")
                     .build();
         }
@@ -393,7 +319,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                 addNewPot(coffeePots[0]);
                 return null;
             } catch (Exception e) {
-                mLastError = e;
+                lastException = e;
                 cancel(true);
                 return null;
             }
@@ -406,9 +332,8 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                 int rowIndex = MainActivity.this.coffeePots.size();
                 newPotRange = "A" + rowIndex + ":O" + rowIndex;
                 ValueRange newPotRow = new ValueRange();
-                newPotRow.setValues(Arrays.<List<Object>>asList(Arrays.<Object>asList(pot.getDateString(), pot.getBarista(), pot.getBeanName(), pot.getRoast(), pot.getTbspCount(), pot.getAvgRating())));
-                this.mService.spreadsheets().values().append(spreadsheetId, newPotRange, newPotRow).setValueInputOption("RAW").execute();
-                ;
+                newPotRow.setValues(Collections.singletonList(Arrays.<Object>asList(pot.getDateString(), pot.getBarista(), pot.getBeanName(), pot.getRoast(), pot.getTbspCount(), pot.getAvgRating())));
+                this.gSheetsService.spreadsheets().values().append(spreadsheetId, newPotRange, newPotRow).setValueInputOption("RAW").execute();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -416,82 +341,31 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
         @Override
         protected void onPreExecute() {
-            mOutputText.setText("");
-            mProgress.show();
+            outputTextView.setText("");
+            progressDialog.show();
         }
 
         @Override
         protected void onPostExecute(Void output) {
-            mProgress.hide();
+            progressDialog.hide();
         }
 
         @Override
         protected void onCancelled() {
-            mProgress.hide();
-            if (mLastError != null) {
-                if (mLastError instanceof GooglePlayServicesAvailabilityIOException) {
-                    showGooglePlayServicesAvailabilityErrorDialog(
-                            ((GooglePlayServicesAvailabilityIOException) mLastError)
-                                    .getConnectionStatusCode());
-                } else if (mLastError instanceof UserRecoverableAuthIOException) {
+            progressDialog.hide();
+            if (lastException != null) {
+                if (lastException instanceof GooglePlayServicesAvailabilityIOException) {
+                    Utils.showGooglePlayServicesAvailabilityErrorDialog(((GooglePlayServicesAvailabilityIOException) lastException).getConnectionStatusCode(), MainActivity.this, REQUEST_GOOGLE_PLAY_SERVICES);
+                } else if (lastException instanceof UserRecoverableAuthIOException) {
                     startActivityForResult(
-                            ((UserRecoverableAuthIOException) mLastError).getIntent(),
+                            ((UserRecoverableAuthIOException) lastException).getIntent(),
                             MainActivity.REQUEST_AUTHORIZATION);
                 } else {
-                    mOutputText.setText("The following error occurred:\n"
-                            + mLastError.getMessage());
+                    outputTextView.setText(String.format(Locale.ENGLISH, getString(R.string.the_following_error_occurred), lastException.getMessage()));
                 }
             } else {
-                mOutputText.setText("Request cancelled.");
+                outputTextView.setText(R.string.request_cancelled);
             }
-        }
-    }
-
-    class CoffeePot {
-
-        private String dateString;
-        private String barista;
-        private String beanName;
-        private String roast;
-        private Float tbspCount;
-        private Double avgRating;
-
-        public CoffeePot(String dateString, String barista, String beanName, String roast, Float tbspCount, Double avgRating) {
-            this.dateString = dateString;
-            this.barista = barista;
-            this.beanName = beanName;
-            this.roast = roast;
-            this.tbspCount = tbspCount;
-            this.avgRating = avgRating;
-        }
-
-        public String getDateString() {
-            return dateString;
-        }
-
-        public String getBarista() {
-            return barista;
-        }
-
-        public String getBeanName() {
-            return beanName;
-        }
-
-        public String getRoast() {
-            return roast;
-        }
-
-        public Float getTbspCount() {
-            return tbspCount;
-        }
-
-        public Double getAvgRating() {
-            return avgRating;
-        }
-
-        @Override
-        public String toString() {
-            return dateString + "," + barista + "," + beanName + "," + roast + "," + tbspCount + "," + avgRating;
         }
     }
 
@@ -500,13 +374,13 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
      * Placing the API calls in their own task ensures the UI stays responsive.
      */
     private class CoffeeMeDataFetchRequestTask extends AsyncTask<Void, Void, List<String>> {
-        private com.google.api.services.sheets.v4.Sheets mService = null;
-        private Exception mLastError = null;
+        private com.google.api.services.sheets.v4.Sheets gSheetsService = null;
+        private Exception lastException = null;
 
         CoffeeMeDataFetchRequestTask(GoogleAccountCredential credential) {
             HttpTransport transport = AndroidHttp.newCompatibleTransport();
             JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
-            mService = new com.google.api.services.sheets.v4.Sheets.Builder(transport, jsonFactory, credential)
+            gSheetsService = new com.google.api.services.sheets.v4.Sheets.Builder(transport, jsonFactory, credential)
                     .setApplicationName("CoffeeMe")
                     .build();
         }
@@ -521,7 +395,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             try {
                 return getDataFromApi();
             } catch (Exception e) {
-                mLastError = e;
+                lastException = e;
                 cancel(true);
                 return null;
             }
@@ -551,9 +425,8 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                 int rowIndex = getCoffeePots().size();
                 newPotRange = "A" + rowIndex + ":O" + rowIndex;
                 ValueRange newPotRow = new ValueRange();
-                newPotRow.setValues(Arrays.<List<Object>>asList(Arrays.<Object>asList(pot.getDateString(), pot.getBarista(), pot.getBeanName(), pot.getRoast(), pot.getTbspCount(), pot.getAvgRating())));
-                this.mService.spreadsheets().values().append(spreadsheetId, newPotRange, newPotRow).setValueInputOption("RAW").execute();
-                ;
+                newPotRow.setValues(Collections.singletonList(Arrays.<Object>asList(pot.getDateString(), pot.getBarista(), pot.getBeanName(), pot.getRoast(), pot.getTbspCount(), pot.getAvgRating())));
+                this.gSheetsService.spreadsheets().values().append(spreadsheetId, newPotRange, newPotRow).setValueInputOption("RAW").execute();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -563,14 +436,26 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             String spreadsheetId = "1a5KdfYJdqvlYzv2BscGwxeZ2cf880HGAK_keWCbijOE";
             String range = "Coffee Scores!A2:O";
             List<String> results = new ArrayList<String>();
-            ValueRange response = this.mService.spreadsheets().values()
+            ValueRange response = this.gSheetsService.spreadsheets().values()
                     .get(spreadsheetId, range)
                     .execute();
             List<List<Object>> values = response.getValues();
             List<CoffeePot> coffeePots = new ArrayList<>();
             if (values != null) {
                 for (List row : values) {
-                    CoffeePot pot = new CoffeePot((String) row.get(0), (String) row.get(1), (String) row.get(2), (String) row.get(3), Float.parseFloat((String) row.get(4)), Double.parseDouble((String) row.get(5)));
+                    String dateString = (String) row.get(0);
+                    String barista = (String) row.get(1);
+                    String beans = (String) row.get(2);
+                    String roast = (String) row.get(3);
+                    Float tbsp = Float.parseFloat((String) row.get(4));
+                    Double avgRating = Double.parseDouble((String) row.get(5));
+                    CoffeePot pot = CoffeePotBuilder.init().setDateString(dateString)
+                            .setBarista(barista)
+                            .setBeanName(beans)
+                            .setRoast(roast)
+                            .setTbspCount(tbsp)
+                            .setAvgRating(avgRating)
+                            .createCoffeePot();
                     results.add(pot.toString());
                     coffeePots.add(pot);
                 }
@@ -583,7 +468,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             String spreadsheetId = "1a5KdfYJdqvlYzv2BscGwxeZ2cf880HGAK_keWCbijOE";
             String range = "Beans!A2:A";
             List<String> results = new ArrayList<String>();
-            ValueRange response = this.mService.spreadsheets().values()
+            ValueRange response = this.gSheetsService.spreadsheets().values()
                     .get(spreadsheetId, range)
                     .execute();
             List<List<Object>> values = response.getValues();
@@ -600,7 +485,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             String spreadsheetId = "1a5KdfYJdqvlYzv2BscGwxeZ2cf880HGAK_keWCbijOE";
             String range = "Roasts!A:A";
             List<String> results = new ArrayList<String>();
-            ValueRange response = this.mService.spreadsheets().values()
+            ValueRange response = this.gSheetsService.spreadsheets().values()
                     .get(spreadsheetId, range)
                     .execute();
             List<List<Object>> values = response.getValues();
@@ -616,39 +501,38 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
         @Override
         protected void onPreExecute() {
-            mOutputText.setText("");
-            mProgress.show();
+            outputTextView.setText("");
+            progressDialog.show();
         }
 
         @Override
         protected void onPostExecute(List<String> output) {
-            mProgress.hide();
+            progressDialog.hide();
             if (output == null || output.size() == 0) {
-                mOutputText.setText("No results returned.");
+                outputTextView.setText(R.string.no_results_returned);
             } else {
                 output.add(0, "Data retrieved using the Google Sheets API:");
-                mOutputText.setText(TextUtils.join("\n", output));
+                outputTextView.setText(TextUtils.join("\n", output));
             }
         }
 
         @Override
         protected void onCancelled() {
-            mProgress.hide();
-            if (mLastError != null) {
-                if (mLastError instanceof GooglePlayServicesAvailabilityIOException) {
-                    showGooglePlayServicesAvailabilityErrorDialog(
-                            ((GooglePlayServicesAvailabilityIOException) mLastError)
-                                    .getConnectionStatusCode());
-                } else if (mLastError instanceof UserRecoverableAuthIOException) {
+            progressDialog.hide();
+            if (lastException != null) {
+                if (lastException instanceof GooglePlayServicesAvailabilityIOException) {
+                    Utils.showGooglePlayServicesAvailabilityErrorDialog(
+                            ((GooglePlayServicesAvailabilityIOException) lastException)
+                                    .getConnectionStatusCode(), MainActivity.this, REQUEST_GOOGLE_PLAY_SERVICES);
+                } else if (lastException instanceof UserRecoverableAuthIOException) {
                     startActivityForResult(
-                            ((UserRecoverableAuthIOException) mLastError).getIntent(),
+                            ((UserRecoverableAuthIOException) lastException).getIntent(),
                             MainActivity.REQUEST_AUTHORIZATION);
                 } else {
-                    mOutputText.setText("The following error occurred:\n"
-                            + mLastError.getMessage());
+                    outputTextView.setText(String.format(Locale.ENGLISH, getString(R.string.the_following_error_occurred), lastException.getMessage()));
                 }
             } else {
-                mOutputText.setText("Request cancelled.");
+                outputTextView.setText(R.string.request_cancelled);
             }
         }
     }
