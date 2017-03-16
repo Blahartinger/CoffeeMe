@@ -44,6 +44,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -93,6 +94,15 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     }
 
 
+    private void addPreviousPot() {
+        CoffeePot previousPot = coffeePots.get(coffeePots.size() - 1);
+        previousPot.dateString = new Date().toString();
+        previousPot.avgRating = 0.0d;
+        SimpleDateFormat format = new SimpleDateFormat("M/dd/YYYY");
+        previousPot.dateString = format.format(new Date());
+        new AddCoffeePotRequestTask(mCredential).execute(coffeePots.get(coffeePots.size() - 1));
+    }
+
     /**
      * Create the main activity.
      *
@@ -111,7 +121,12 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             @Override
             public void onClick(View view) {
 
-                new AddCoffeePotRequestTask(mCredential).execute(coffeePots.get(coffeePots.size()-1));
+                BrewCoffeePotView brewView = new BrewCoffeePotView(MainActivity.this);
+                Dialog brewDialog = new Dialog(MainActivity.this, R.style.BrewCoffeePotDialog);
+                brewDialog.setContentView(brewView);
+                brewDialog.show();
+
+//                addPreviousPot();
                 Snackbar.make(view, "Added new Pot!", Snackbar.LENGTH_SHORT).show();
             }
         });
