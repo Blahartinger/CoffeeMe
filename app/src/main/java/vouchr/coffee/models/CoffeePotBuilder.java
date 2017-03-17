@@ -8,7 +8,8 @@ public class CoffeePotBuilder {
     private Float tbspCount;
     private Double avgRating;
 
-    private CoffeePotBuilder() {}
+    private CoffeePotBuilder() {
+    }
 
     public static CoffeePotBuilder init() {
         return new CoffeePotBuilder();

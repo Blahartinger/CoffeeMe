@@ -1,15 +1,11 @@
 package vouchr.coffeemachine.app.coffeeme;
 
-import android.app.Activity;
-import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
 
 import java.util.List;
 
 import io.reactivex.Observable;
-import io.reactivex.ObservableEmitter;
-import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.ObservableSource;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
@@ -29,7 +25,8 @@ public class CoffeeSheetSession {
     private PublishSubject<CoffeeSheetService> sessionEmitter;
     private CoffeeSheetService coffeeSheetServiceCachedInstance;
 
-    private CoffeeSheetSession() {}
+    private CoffeeSheetSession() {
+    }
 
     private static synchronized CoffeeSheetSession instance() {
         if (__session__ == null) {

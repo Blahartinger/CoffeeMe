@@ -42,21 +42,18 @@ public class GoogleCredentialUIHelper implements EasyPermissions.PermissionCallb
     private static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
 
     private static final String[] SCOPES = {SheetsScopes.SPREADSHEETS};
-
-    public GoogleAccountCredential getGoogleAccountCredential() {
-        return googleAccountCredential;
-    }
-
     private GoogleAccountCredential googleAccountCredential = null;
-
     private Activity activity;
-
     private PublishSubject<Ignore> authenticationPublisher;
 
     public GoogleCredentialUIHelper(Activity activity) {
         this.activity = activity;
         // Initialize credentials and service object.
         googleAccountCredential = GoogleAccountCredential.usingOAuth2(activity.getApplicationContext(), Arrays.asList(SCOPES)).setBackOff(new ExponentialBackOff());
+    }
+
+    public GoogleAccountCredential getGoogleAccountCredential() {
+        return googleAccountCredential;
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -119,9 +116,9 @@ public class GoogleCredentialUIHelper implements EasyPermissions.PermissionCallb
         }).observeOn(Schedulers.io()).onErrorResumeNext(new Function<Throwable, ObservableSource<? extends Ignore>>() {
             @Override
             public ObservableSource<? extends Ignore> apply(Throwable throwable) throws Exception {
-                if(throwable instanceof Exception){
+                if (throwable instanceof Exception) {
                     Exception e = (Exception) throwable;
-                    if(e.getMessage().equals("ERROR_CHOOSE_ACCOUNT")) {
+                    if (e.getMessage().equals("ERROR_CHOOSE_ACCOUNT")) {
                         return authenticationPublisher;
                     }
                 }
@@ -129,7 +126,6 @@ public class GoogleCredentialUIHelper implements EasyPermissions.PermissionCallb
             }
         });
     }
-
 
 
     /**

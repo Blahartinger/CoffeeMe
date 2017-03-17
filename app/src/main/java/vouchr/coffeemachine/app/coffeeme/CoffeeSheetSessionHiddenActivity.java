@@ -12,7 +12,7 @@ import io.reactivex.disposables.Disposable;
  * Created by Bryan on 2017-03-16.
  */
 
-public class CoffeeSheetSessionHiddenActivity extends AppCompatActivity{
+public class CoffeeSheetSessionHiddenActivity extends AppCompatActivity {
 
     private GoogleCredentialUIHelper googleCredentialUIHelper;
     private CoffeeSheetService coffeeSheetService;

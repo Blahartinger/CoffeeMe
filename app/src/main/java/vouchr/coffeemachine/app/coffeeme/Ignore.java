@@ -5,7 +5,8 @@ package vouchr.coffeemachine.app.coffeeme;
  */
 
 public final class Ignore {
-    private Ignore() {}
-
     public static final Ignore GET = new Ignore();
+
+    private Ignore() {
+    }
 }
