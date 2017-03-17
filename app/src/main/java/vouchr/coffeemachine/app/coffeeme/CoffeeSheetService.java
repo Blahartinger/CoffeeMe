@@ -5,6 +5,7 @@ import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccoun
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
 import com.google.api.client.json.jackson2.JacksonFactory;
+import com.google.api.services.sheets.v4.model.AppendValuesResponse;
 import com.google.api.services.sheets.v4.model.ValueRange;
 
 import java.io.IOException;
@@ -61,7 +62,7 @@ public class CoffeeSheetService {
         return results;
     }
 
-    public void addNewPot(CoffeePot pot) {
+    public Boolean addNewPot(CoffeePot pot) {
         String spreadsheetId = "1a5KdfYJdqvlYzv2BscGwxeZ2cf880HGAK_keWCbijOE";
         String newPotRange = null;
         try {
@@ -69,9 +70,11 @@ public class CoffeeSheetService {
             newPotRange = "A" + rowIndex + ":O" + rowIndex;
             ValueRange newPotRow = new ValueRange();
             newPotRow.setValues(Collections.singletonList(Arrays.<Object>asList(pot.getDateString(), pot.getBarista(), pot.getBeanName(), pot.getRoast(), pot.getTbspCount(), pot.getAvgRating())));
-            this.gSheetsService.spreadsheets().values().append(spreadsheetId, newPotRange, newPotRow).setValueInputOption("RAW").execute();
+            AppendValuesResponse response = this.gSheetsService.spreadsheets().values().append(spreadsheetId, newPotRange, newPotRow).setValueInputOption("RAW").execute();
+            return response.getUpdates().getUpdatedRows() > 0;
         } catch (IOException e) {
             e.printStackTrace();
+            return false;
         }
     }
 

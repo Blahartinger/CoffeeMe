@@ -1,13 +1,19 @@
 package vouchr.coffeemachine.app.coffeeme;
 
+import android.app.Activity;
+import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
 
 import java.util.List;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.ObservableSource;
+import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
+import io.reactivex.subjects.PublishSubject;
 import vouchr.coffee.models.CoffeePot;
 
 /**
@@ -16,23 +22,107 @@ import vouchr.coffee.models.CoffeePot;
 
 public class CoffeeSheetSession {
 
-    private CoffeeSheetService coffeeSheetService;
+    private static CoffeeSheetSession __session__ = null;
 
-    public CoffeeSheetSession(Context context, CoffeeSheetService coffeeSheetService) {
-        this.coffeeSheetService = coffeeSheetService;
+    private Context context;
+    private Intent intent;
+    private PublishSubject<CoffeeSheetService> sessionEmitter;
+    private CoffeeSheetService coffeeSheetServiceCachedInstance;
+
+    private CoffeeSheetSession() {}
+
+    private static synchronized CoffeeSheetSession instance() {
+        if (__session__ == null) {
+            __session__ = new CoffeeSheetSession();
+        }
+        return __session__;
+    }
+
+    public static CoffeeSheetSession session(Context context) {
+
+        CoffeeSheetSession instance = instance();
+
+        instance.context = context.getApplicationContext();
+        Intent intent = new Intent(instance.context, CoffeeSheetSessionHiddenActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        instance.intent = intent;
+
+        return instance;
+    }
+
+    public void success(CoffeeSheetService coffeeSheetService) {
+        this.coffeeSheetServiceCachedInstance = coffeeSheetService;
+        sessionEmitter.onNext(coffeeSheetService);
+        sessionEmitter.onComplete();
+    }
+
+    public void failure(Throwable t) {
+        sessionEmitter.onError(t);
+    }
+
+    private Observable<CoffeeSheetService> authObservable() {
+        if (coffeeSheetServiceCachedInstance != null) {
+            return Observable.just(coffeeSheetServiceCachedInstance).observeOn(Schedulers.io());
+        } else {
+            sessionEmitter = PublishSubject.create();
+            context.startActivity(intent);
+            return sessionEmitter.observeOn(Schedulers.io());
+        }
     }
 
     public Observable<List<CoffeePot>> getCoffeePots() {
-        return Observable.create(new ObservableOnSubscribe<List<CoffeePot>>() {
+        return authObservable().flatMap(new Function<CoffeeSheetService, ObservableSource<List<CoffeePot>>>() {
             @Override
-            public void subscribe(ObservableEmitter<List<CoffeePot>> e) throws Exception {
+            public ObservableSource<List<CoffeePot>> apply(CoffeeSheetService coffeeSheetService) throws Exception {
                 try {
-                    e.onNext(coffeeSheetService.getCoffeePots());
+                    return Observable.just(coffeeSheetService.getCoffeePots());
                 } catch (Throwable t) {
                     t.printStackTrace();
-                    e.onError(t);
+                    return Observable.error(t);
                 }
             }
-        }).subscribeOn(Schedulers.io());
+        });
+    }
+
+    public Observable<Boolean> addCoffeePot(final CoffeePot coffeePot) {
+        return authObservable().flatMap(new Function<CoffeeSheetService, ObservableSource<Boolean>>() {
+            @Override
+            public ObservableSource<Boolean> apply(CoffeeSheetService coffeeSheetService) throws Exception {
+                try {
+                    return Observable.just(coffeeSheetService.addNewPot(coffeePot));
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    return Observable.error(t);
+                }
+            }
+        });
+    }
+
+    public Observable<List<String>> getCoffeeBeans() {
+        return authObservable().flatMap(new Function<CoffeeSheetService, ObservableSource<List<String>>>() {
+            @Override
+            public ObservableSource<List<String>> apply(CoffeeSheetService coffeeSheetService) throws Exception {
+                try {
+                    return Observable.just(coffeeSheetService.getBeans());
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    return Observable.error(t);
+                }
+            }
+        });
+    }
+
+    public Observable<List<String>> getCoffeeRoasts() {
+        return authObservable().flatMap(new Function<CoffeeSheetService, ObservableSource<List<String>>>() {
+            @Override
+            public ObservableSource<List<String>> apply(CoffeeSheetService coffeeSheetService) throws Exception {
+                try {
+                    return Observable.just(coffeeSheetService.getRoasts());
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    return Observable.error(t);
+                }
+            }
+        });
     }
 }
