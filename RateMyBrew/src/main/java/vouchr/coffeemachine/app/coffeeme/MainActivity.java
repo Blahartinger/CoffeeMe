@@ -7,28 +7,23 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.text.TextUtils;
-import android.text.method.ScrollingMovementMethod;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import butterknife.OnClick;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
-import io.reactivex.functions.Function;
 import vouchr.coffee.models.CoffeePot;
 
 public class MainActivity extends AppCompatActivity {
@@ -44,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     protected ProgressDialog progressDialog;
 
     private List<CoffeePot> coffeePots = null;
+    private MainActivity.CoffeePotListViewAdapter listAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,20 +47,22 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
+        listAdapter = new CoffeePotListViewAdapter();
+        coffeePotList.setAdapter(listAdapter);
+
         setSupportActionBar(toolbar);
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 showAddNewPotDialog();
-                Snackbar.make(view, "Added new Pot!", Snackbar.LENGTH_SHORT).show();
             }
         });
 
         progressDialog = new ProgressDialog(this);
         progressDialog.setMessage(getString(R.string.fetching_coffee_pots));
 
-        getResultsFromApi();
+        refreshCoffeePotList();
     }
 
     @Override
@@ -89,6 +87,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onPotBrewed(CoffeePot coffeePot) {
                 brewDialog.dismiss();
+                Snackbar.make(fab, "Added new Pot!", Snackbar.LENGTH_SHORT).show();
+                refreshCoffeePotList();
             }
 
             @Override
@@ -101,22 +101,13 @@ public class MainActivity extends AppCompatActivity {
         brewDialog.show();
     }
 
-    private void getResultsFromApi() {
+    private void refreshCoffeePotList() {
         CoffeeSheetSession.session(this).getCoffeePots().doOnNext(new Consumer<List<CoffeePot>>() {
             @Override
             public void accept(List<CoffeePot> coffeePots) throws Exception {
                 MainActivity.this.coffeePots = coffeePots;
             }
-        }).map(new Function<List<CoffeePot>, List<String>>() {
-            @Override
-            public List<String> apply(List<CoffeePot> coffeePots) throws Exception {
-                List<String> output = new ArrayList<>();
-                for (CoffeePot pot : coffeePots) {
-                    output.add(pot.toString());
-                }
-                return output;
-            }
-        }).observeOn(AndroidSchedulers.mainThread()).subscribe(new Observer<List<String>>() {
+        }).observeOn(AndroidSchedulers.mainThread()).subscribe(new Observer<List<CoffeePot>>() {
 
             @Override
             public void onSubscribe(Disposable d) {
@@ -124,13 +115,12 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onNext(List<String> results) {
+            public void onNext(List<CoffeePot> coffeePots) {
 
-                if (results == null || results.size() == 0) {
+                if (coffeePots == null || coffeePots.size() == 0) {
                     // TODO: show R.string.no_results_returned error
                 } else {
-                    results.add(0, "Data retrieved using the Google Sheets API:");
-                    coffeePotList.setAdapter(new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, results));;
+                    listAdapter.setData(coffeePots);
                 }
             }
 
@@ -144,5 +134,46 @@ public class MainActivity extends AppCompatActivity {
                 progressDialog.hide();
             }
         });
+    }
+
+    private class CoffeePotListViewAdapter extends BaseAdapter {
+
+        List<CoffeePot> data = new ArrayList<>();
+
+        public void setData(List<CoffeePot> coffeePots) {
+            data.addAll(coffeePots);
+            notifyDataSetInvalidated();
+        }
+
+        @Override
+        public int getCount() {
+            return data.size();
+        }
+
+        @Override
+        public CoffeePot getItem(int position) {
+            return data.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return getItem(position).toString().hashCode();
+        }
+
+        @Override
+        public View getView(int position, View convertView, ViewGroup parent) {
+
+            ListViewCellCoffeePot potView = null;
+            if (convertView != null && convertView instanceof ListViewCellCoffeePot) {
+                potView = (ListViewCellCoffeePot) convertView;
+            } else {
+                potView = new ListViewCellCoffeePot(MainActivity.this);
+            }
+
+            CoffeePot coffeePotData = getItem(position);
+            potView.setCoffeePot(coffeePotData);
+
+            return potView;
+        }
     }
 }

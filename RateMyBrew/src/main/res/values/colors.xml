@@ -13,4 +13,8 @@
 
     <color name="lightBlue">#0bbfbf</color>
     <color name="lightGreen">#56bf0b</color>
+
+    <color name="lightRoast">#987b25</color>
+    <color name="mediumRoast">#651c07</color>
+    <color name="darkRoast">#3A1004</color>
 </resources>

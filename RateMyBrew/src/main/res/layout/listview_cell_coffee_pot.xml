@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="5dp">
+
+    <TextView
+        android:id="@+id/dateTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_centerInParent="true"
+        android:padding="10dp"
+        tools:text="12/21/2017" />
+
+    <ImageView
+        android:id="@+id/beanImageView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_margin="5dp"
+        android:minHeight="80dp"
+        android:minWidth="80dp"
+        android:padding="4dp"
+        android:src="@drawable/circle_beans" />
+
+    <TextView
+        android:id="@+id/beanTypeTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignTop="@id/beanImageView"
+        android:layout_toLeftOf="@id/dateTextView"
+        android:layout_toRightOf="@id/beanImageView"
+        tools:text="Kicking Horse: Three Sisters" />
+
+    <ImageView
+        android:id="@+id/roastTypeImageView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/beanTypeTextView"
+        android:layout_marginTop="5dp"
+        android:layout_toRightOf="@id/beanImageView"
+        android:src="@drawable/coffee_grain"
+        tools:tint="@color/mediumRoast" />
+
+    <TextView
+        android:id="@+id/tablespoonsTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@id/roastTypeImageView"
+        android:layout_alignTop="@id/roastTypeImageView"
+        android:layout_marginLeft="5dp"
+        android:layout_toLeftOf="@id/dateTextView"
+        android:layout_toRightOf="@id/roastTypeImageView"
+        android:gravity="center_vertical"
+        tools:text="10 Tbps" />
+</RelativeLayout>

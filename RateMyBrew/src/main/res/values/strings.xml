@@ -11,4 +11,5 @@
     <string name="app_needs_access_to_your_google_account">This app needs to access your Google account (via Contacts).</string>
     <string name="tbps_out_of">%1$d Tbps / %2$d</string>
     <string name="fetching_coffee_pots">Fetching Coffee Pots...</string>
+    <string name="format_tbsp">%1$s Tbsp</string>
 </resources>
