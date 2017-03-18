@@ -7,6 +7,8 @@ import java.util.List;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.PublishSubject;
@@ -43,6 +45,8 @@ public class CoffeeSheetSession {
         Intent intent = new Intent(instance.context, CoffeeSheetSessionHiddenActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         instance.intent = intent;
+        instance.sessionEmitter = PublishSubject.create();
+        instance.sessionEmitter.share();
 
         return instance;
     }
@@ -61,9 +65,15 @@ public class CoffeeSheetSession {
         if (coffeeSheetServiceCachedInstance != null) {
             return Observable.just(coffeeSheetServiceCachedInstance).observeOn(Schedulers.io());
         } else {
-            sessionEmitter = PublishSubject.create();
-            context.startActivity(intent);
-            return sessionEmitter.observeOn(Schedulers.io());
+            return sessionEmitter.doOnSubscribe(new Consumer<Disposable>() {
+                @Override
+                public void accept(Disposable disposable) throws Exception {
+                    if(intent != null) {
+                        context.startActivity(intent);
+                        intent = null;
+                    }
+                }
+            }).observeOn(Schedulers.io());
         }
     }
 
@@ -115,6 +125,20 @@ public class CoffeeSheetSession {
             public ObservableSource<List<String>> apply(CoffeeSheetService coffeeSheetService) throws Exception {
                 try {
                     return Observable.just(coffeeSheetService.getRoasts());
+                } catch (Throwable t) {
+                    t.printStackTrace();
+                    return Observable.error(t);
+                }
+            }
+        });
+    }
+
+    public Observable<List<String>> getBaristas() {
+        return authObservable().flatMap(new Function<CoffeeSheetService, ObservableSource<List<String>>>() {
+            @Override
+            public ObservableSource<List<String>> apply(CoffeeSheetService coffeeSheetService) throws Exception {
+                try {
+                    return Observable.just(coffeeSheetService.getBaristas());
                 } catch (Throwable t) {
                     t.printStackTrace();
                     return Observable.error(t);

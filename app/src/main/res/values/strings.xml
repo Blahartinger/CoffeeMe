@@ -10,4 +10,5 @@
     <string name="this_app_requires_google_play_services">This app requires Google Play Services. Please install Google Play Services on your device and relaunch this app.</string>
     <string name="no_network_connection_available">No network connection available.</string>
     <string name="app_needs_access_to_your_google_account">This app needs to access your Google account (via Contacts).</string>
+    <string name="tbps_out_of">%1$d Tbps / %2$d</string>
 </resources>

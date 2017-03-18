@@ -151,7 +151,7 @@ public class GoogleCredentialUIHelper implements EasyPermissions.PermissionCallb
             }
         } else {
             // Request the GET_ACCOUNTS permission via a user dialog
-            EasyPermissions.requestPermissions(this, activity.getString(R.string.app_needs_access_to_your_google_account), REQUEST_PERMISSION_GET_ACCOUNTS, Manifest.permission.GET_ACCOUNTS);
+            EasyPermissions.requestPermissions(activity, activity.getString(R.string.app_needs_access_to_your_google_account), REQUEST_PERMISSION_GET_ACCOUNTS, Manifest.permission.GET_ACCOUNTS);
         }
     }
 
@@ -164,13 +164,7 @@ public class GoogleCredentialUIHelper implements EasyPermissions.PermissionCallb
      * @param grantResults The grant results for the corresponding permissions
      *                     which is either PERMISSION_GRANTED or PERMISSION_DENIED. Never null.
      */
-    @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            activity.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        }
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
     }
 

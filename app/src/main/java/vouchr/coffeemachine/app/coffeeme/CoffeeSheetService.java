@@ -63,7 +63,6 @@ public class CoffeeSheetService {
     }
 
     public Boolean addNewPot(CoffeePot pot) {
-        String spreadsheetId = "1a5KdfYJdqvlYzv2BscGwxeZ2cf880HGAK_keWCbijOE";
         String newPotRange = null;
         try {
             int rowIndex = getCoffeePots().size();
@@ -84,7 +83,6 @@ public class CoffeeSheetService {
         ValueRange response = this.gSheetsService.spreadsheets().values().get(spreadsheetId, range).execute();
         List<List<Object>> values = response.getValues();
         if (values != null) {
-            results.add("Date, Barista, Beans, Avg Rating");
             for (List row : values) {
                 results.add((String) row.get(0));
             }
@@ -98,7 +96,19 @@ public class CoffeeSheetService {
         ValueRange response = this.gSheetsService.spreadsheets().values().get(spreadsheetId, range).execute();
         List<List<Object>> values = response.getValues();
         if (values != null) {
-            results.add("Date, Barista, Beans, Avg Rating");
+            for (List row : values) {
+                results.add((String) row.get(0));
+            }
+        }
+        return results;
+    }
+
+    public List<String> getBaristas() throws IOException {
+        String range = "Baristas!A2:A";
+        List<String> results = new ArrayList<String>();
+        ValueRange response = this.gSheetsService.spreadsheets().values().get(spreadsheetId, range).execute();
+        List<List<Object>> values = response.getValues();
+        if (values != null) {
             for (List row : values) {
                 results.add((String) row.get(0));
             }

@@ -12,16 +12,14 @@ import android.text.method.ScrollingMovementMethod;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -32,7 +30,6 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import vouchr.coffee.models.CoffeePot;
-import vouchr.coffee.models.CoffeePotBuilder;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -51,28 +48,6 @@ public class MainActivity extends AppCompatActivity {
     protected ProgressDialog progressDialog;
 
     private List<CoffeePot> coffeePots = null;
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,13 +72,37 @@ public class MainActivity extends AppCompatActivity {
         progressDialog.setMessage(getString(R.string.calling_google_sheets_api));
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == R.id.action_settings) {
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
     private void showAddNewPotDialog() {
         BrewCoffeePotView brewView = new BrewCoffeePotView(MainActivity.this);
-        Dialog brewDialog = new Dialog(MainActivity.this, R.style.BrewCoffeePotDialog);
+        final Dialog brewDialog = new Dialog(MainActivity.this, R.style.BrewCoffeePotDialog);
+        brewView.setCoffeePotViewAdapter(new BrewCoffeePotView.BrewCoffeePotViewAdapter() {
+            @Override
+            public void onPotBrewed(CoffeePot coffeePot) {
+                brewDialog.dismiss();
+            }
+
+            @Override
+            public void onCancelled() {
+
+            }
+        });
+
         brewDialog.setContentView(brewView);
-
-//        addPreviousPotIfAvailable(); // TODO: add to dialog
-
         brewDialog.show();
     }
 
@@ -113,42 +112,6 @@ public class MainActivity extends AppCompatActivity {
         outputTextView.setText("");
         getResultsFromApi();
         callApiButton.setEnabled(true);
-    }
-
-    private CoffeePot getPreviousCoffeePot() {
-        return coffeePots.get(coffeePots.size() - 1);
-    }
-
-    private void addPreviousPotIfAvailable() {
-        CoffeePot previousPot = getPreviousCoffeePot();
-        if (previousPot != null) {
-            SimpleDateFormat format = new SimpleDateFormat("M/dd/YYYY", Locale.ENGLISH);
-            CoffeePot newPot = CoffeePotBuilder.coffeePotBuilderFromCoffeePot(previousPot)
-                    .setDateString(format.format(new Date()))
-                    .setAvgRating(0.0d)
-                    .createCoffeePot();
-            CoffeeSheetSession.session(this).addCoffeePot(newPot).subscribe(new Observer<Boolean>() {
-                @Override
-                public void onSubscribe(Disposable d) {
-                    progressDialog.show();
-                }
-
-                @Override
-                public void onNext(Boolean aBoolean) {
-
-                }
-
-                @Override
-                public void onError(Throwable e) {
-                    progressDialog.hide();
-                }
-
-                @Override
-                public void onComplete() {
-                    progressDialog.hide();
-                }
-            });
-        }
     }
 
     private void getResultsFromApi() {
@@ -181,7 +144,8 @@ public class MainActivity extends AppCompatActivity {
                     outputTextView.setText(R.string.no_results_returned);
                 } else {
                     results.add(0, "Data retrieved using the Google Sheets API:");
-                    outputTextView.setText(TextUtils.join(outputTextView.getText() + "\n", results));
+//                    outputTextView.setText(TextUtils.join(outputTextView.getText() + "\n", results));
+                    coffeePotList.setAdapter(new ArrayAdapter<String>(MainActivity.this, android.R.layout.simple_list_item_1, results));;
                 }
             }
 

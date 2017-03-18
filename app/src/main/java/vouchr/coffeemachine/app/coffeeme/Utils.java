@@ -9,6 +9,10 @@ import android.net.NetworkInfo;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 
+import java.util.Date;
+import java.text.SimpleDateFormat;
+import java.util.Locale;
+
 /**
  * Created by Bryan on 2017-03-16.
  */
@@ -64,6 +68,11 @@ public class Utils {
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
         Dialog dialog = apiAvailability.getErrorDialog(activity, connectionStatusCode, tag);
         dialog.show();
+    }
+
+    public static String formatDateMddYY(Date date) {
+        SimpleDateFormat format = new SimpleDateFormat("M/dd/YYYY", Locale.ENGLISH);
+        return format.format(date);
     }
 
 }

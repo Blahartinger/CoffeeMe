@@ -55,6 +55,14 @@ public class CoffeePotBuilder {
     }
 
     public CoffeePot createCoffeePot() {
-        return new CoffeePot(dateString, barista, beanName, roast, tbspCount, avgRating);
+        if(isValidPot()) {
+            return new CoffeePot(dateString, barista, beanName, roast, tbspCount, avgRating);
+        } else {
+            return null;
+        }
+    }
+
+    public boolean isValidPot() {
+        return dateString != null && barista != null && beanName != null && roast != null && tbspCount != null;
     }
 }
