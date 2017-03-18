@@ -16,6 +16,7 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import butterknife.BindView;
@@ -65,20 +66,20 @@ public class MainActivity extends AppCompatActivity {
         refreshCoffeePotList();
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
+//    @Override
+//    public boolean onCreateOptionsMenu(Menu menu) {
+//        getMenuInflater().inflate(R.menu.menu_main, menu);
+//        return true;
+//    }
+//
+//    @Override
+//    public boolean onOptionsItemSelected(MenuItem item) {
+//        int id = item.getItemId();
+//        if (id == R.id.action_settings) {
+//            return true;
+//        }
+//        return super.onOptionsItemSelected(item);
+//    }
 
     private void showAddNewPotDialog() {
         BrewCoffeePotView brewView = new BrewCoffeePotView(MainActivity.this);
@@ -142,6 +143,7 @@ public class MainActivity extends AppCompatActivity {
 
         public void setData(List<CoffeePot> coffeePots) {
             data.addAll(coffeePots);
+            Collections.reverse(data);
             notifyDataSetInvalidated();
         }
 

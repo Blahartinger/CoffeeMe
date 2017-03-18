@@ -56,7 +56,6 @@ public class Utils {
         }
     }
 
-
     /**
      * Display an error dialog showing that Google Play Services is missing
      * or out of date.
@@ -71,8 +70,7 @@ public class Utils {
     }
 
     public static String formatDateMddYY(Date date) {
-        SimpleDateFormat format = new SimpleDateFormat("M/dd/YYYY", Locale.ENGLISH);
+        SimpleDateFormat format = new SimpleDateFormat("M/dd/yyyy", Locale.ENGLISH);
         return format.format(date);
     }
-
 }
