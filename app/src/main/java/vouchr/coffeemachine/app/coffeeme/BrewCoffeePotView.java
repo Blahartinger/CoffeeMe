@@ -88,25 +88,17 @@ public class BrewCoffeePotView extends LinearLayout {
 
         tbpsSeekBar.setOnSeekBarChangeListener(
                 new SeekBar.OnSeekBarChangeListener() {
-                    int progress = 0;
 
                     @Override
                     public void onProgressChanged(SeekBar seekBar, int progresValue, boolean fromUser) {
-                        progress = progresValue;
+                        BrewCoffeePotView.this.setTbsp(progresValue);
                     }
 
                     @Override
-                    public void onStartTrackingTouch(SeekBar seekBar) {
-                        // Do something here,
-                        //if you want to do anything at the start of
-                        // touching the seekbar
-                    }
+                    public void onStartTrackingTouch(SeekBar seekBar) {}
 
                     @Override
-                    public void onStopTrackingTouch(SeekBar seekBar) {
-                        // Display the value in textview
-                        BrewCoffeePotView.this.setTbsp(progress);
-                    }
+                    public void onStopTrackingTouch(SeekBar seekBar) {}
                 });
         baristaSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -115,35 +107,28 @@ public class BrewCoffeePotView extends LinearLayout {
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
         beansSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                coffeePotBuilder.setBarista(beansList.get(position));
+                coffeePotBuilder.setBeanName(beansList.get(position));
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
         roastSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                coffeePotBuilder.setBarista(roastsList.get(position));
+                coffeePotBuilder.setRoast(roastsList.get(position));
             }
 
             @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-
-            }
+            public void onNothingSelected(AdapterView<?> parent) {}
         });
 
         CoffeeSheetSession session = CoffeeSheetSession.session(getContext());
-
         Observable.combineLatest(session.getCoffeeBeans(), session.getCoffeeRoasts(), session.getBaristas(), new Function3<List<String>, List<String>, List<String>, Map<String, List<String>>>() {
             @Override
             public Map<String, List<String>> apply(List<String> beans, List<String> roasts, List<String> baristas) throws Exception {
@@ -222,12 +207,12 @@ public class BrewCoffeePotView extends LinearLayout {
 
                 break;
             case R.id.brewButton:
-                brewButton.setEnabled(false);
-                progressDialog.show();
                 if (coffeePotBuilder.isValidPot()) {
+                    brewButton.setEnabled(false);
+                    progressDialog.show();
                     final CoffeePot newPotBrewed = coffeePotBuilder.createCoffeePot();
                     if (newPotBrewed != null) {
-                        CoffeeSheetSession.session(getContext()).addCoffeePot(newPotBrewed).subscribe(new Consumer<Boolean>() {
+                        CoffeeSheetSession.session(getContext()).addCoffeePot(newPotBrewed).observeOn(AndroidSchedulers.mainThread()).subscribe(new Consumer<Boolean>() {
                             @Override
                             public void accept(Boolean success) throws Exception {
                                 progressDialog.hide();
@@ -242,6 +227,8 @@ public class BrewCoffeePotView extends LinearLayout {
                             }
                         });
                     }
+                } else {
+                    // TODO: show error pot isn't valid...
                 }
                 break;
         }

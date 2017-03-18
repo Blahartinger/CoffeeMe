@@ -28,6 +28,7 @@ public class CoffeeSheetSession {
     private CoffeeSheetService coffeeSheetServiceCachedInstance;
 
     private CoffeeSheetSession() {
+        sessionEmitter = PublishSubject.create();
     }
 
     private static synchronized CoffeeSheetSession instance() {
@@ -45,8 +46,6 @@ public class CoffeeSheetSession {
         Intent intent = new Intent(instance.context, CoffeeSheetSessionHiddenActivity.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         instance.intent = intent;
-        instance.sessionEmitter = PublishSubject.create();
-        instance.sessionEmitter.share();
 
         return instance;
     }
@@ -65,15 +64,11 @@ public class CoffeeSheetSession {
         if (coffeeSheetServiceCachedInstance != null) {
             return Observable.just(coffeeSheetServiceCachedInstance).observeOn(Schedulers.io());
         } else {
-            return sessionEmitter.doOnSubscribe(new Consumer<Disposable>() {
-                @Override
-                public void accept(Disposable disposable) throws Exception {
-                    if(intent != null) {
-                        context.startActivity(intent);
-                        intent = null;
-                    }
-                }
-            }).observeOn(Schedulers.io());
+            if(intent != null) {
+                context.startActivity(intent);
+                intent = null;
+            }
+            return sessionEmitter.observeOn(Schedulers.io()).share();
         }
     }
 

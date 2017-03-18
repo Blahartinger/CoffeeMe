@@ -48,6 +48,8 @@ public class GoogleCredentialUIHelper implements EasyPermissions.PermissionCallb
 
     public GoogleCredentialUIHelper(Activity activity) {
         this.activity = activity;
+        authenticationPublisher = PublishSubject.create();
+
         // Initialize credentials and service object.
         googleAccountCredential = GoogleAccountCredential.usingOAuth2(activity.getApplicationContext(), Arrays.asList(SCOPES)).setBackOff(new ExponentialBackOff());
     }
@@ -99,11 +101,9 @@ public class GoogleCredentialUIHelper implements EasyPermissions.PermissionCallb
             @Override
             public void subscribe(ObservableEmitter<Ignore> e) throws Exception {
                 if (!Utils.isGooglePlayServicesAvailable(activity)) {
-                    authenticationPublisher = PublishSubject.create();
                     e.onError(new Exception("ERROR_AQUIRE_GOOGLE_PLAY_SERVICES"));
                     Utils.acquireGooglePlayServices(activity, REQUEST_GOOGLE_PLAY_SERVICES);
                 } else if (googleAccountCredential.getSelectedAccountName() == null) {
-                    authenticationPublisher = PublishSubject.create();
                     e.onError(new Exception("ERROR_CHOOSE_ACCOUNT"));
                     chooseAccount();
                 } else if (!Utils.isDeviceOnline(activity)) {
@@ -119,7 +119,7 @@ public class GoogleCredentialUIHelper implements EasyPermissions.PermissionCallb
                 if (throwable instanceof Exception) {
                     Exception e = (Exception) throwable;
                     if (e.getMessage().equals("ERROR_CHOOSE_ACCOUNT")) {
-                        return authenticationPublisher;
+                        return authenticationPublisher.share();
                     }
                 }
                 return Observable.error(throwable);

@@ -42,21 +42,32 @@ public class CoffeeSheetService {
         List<CoffeePot> results = new ArrayList<>();
         if (values != null) {
             for (List row : values) {
-                String dateString = (String) row.get(0);
-                String barista = (String) row.get(1);
-                String beans = (String) row.get(2);
-                String roast = (String) row.get(3);
-                Float tbsp = Float.parseFloat((String) row.get(4));
-                Double avgRating = Double.parseDouble((String) row.get(5));
-                CoffeePot pot = CoffeePotBuilder.init().setDateString(dateString)
-                        .setBarista(barista)
-                        .setBeanName(beans)
-                        .setRoast(roast)
-                        .setTbspCount(tbsp)
-                        .setAvgRating(avgRating)
-                        .createCoffeePot();
+                String dateString = null;
+                String barista = null;
+                String beans = null;
+                String roast = null;
+                Float tbsp = null;
+                Double avgRating = null;
+                try {
+                    dateString = (String) row.get(0);
+                    barista = (String) row.get(1);
+                    beans = (String) row.get(2);
+                    roast = (String) row.get(3);
+                    tbsp = Float.parseFloat((String) row.get(4));
+                    avgRating = Double.parseDouble((String) row.get(5));
+                }catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    CoffeePot pot = CoffeePotBuilder.init().setDateString(dateString)
+                            .setBarista(barista)
+                            .setBeanName(beans)
+                            .setRoast(roast)
+                            .setTbspCount(tbsp)
+                            .setAvgRating(avgRating)
+                            .createCoffeePot();
 
-                results.add(pot);
+                    results.add(pot);
+                }
             }
         }
         return results;
